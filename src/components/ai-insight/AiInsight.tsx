@@ -5,10 +5,10 @@ import { Sparkles, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { WeatherData, GitHubProjectData, AiInsightData } from '@/types';
+import { GitHubProjectData, AiInsightData, CombinedWeatherData } from '@/types';
 
 interface AiInsightProps {
-  weatherData?: WeatherData | null;
+  weatherData?: CombinedWeatherData | null;
   project?: GitHubProjectData | null;
 }
 
@@ -20,7 +20,7 @@ export default function AiInsight({ weatherData, project }: AiInsightProps) {
   const isProjectSpecificMode = !!project;
 
   const generateInsight = useCallback(async () => {
-    const canGenerateGlobal = !!weatherData;
+    const canGenerateGlobal = !!weatherData?.current;
     const canGenerateProjectSpecific = !!project;
 
     if (!canGenerateGlobal && !canGenerateProjectSpecific) {
@@ -38,7 +38,11 @@ export default function AiInsight({ weatherData, project }: AiInsightProps) {
     try {
       const requestBody = isProjectSpecificMode
         ? { project }
-        : { weatherData };
+        : { weatherData: weatherData?.current };
+
+      if (!isProjectSpecificMode && !requestBody.weatherData) {
+        throw new Error("Current weather data is missing for AI insight.");
+      }
 
       const response = await fetch('/api/gemini', {
         method: 'POST',
@@ -51,7 +55,7 @@ export default function AiInsight({ weatherData, project }: AiInsightProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || 'Failed to generate AI insight');
+        throw new Error(data.details || data.error || 'Failed to generate AI insight');
       }
 
       setInsightData(data);
@@ -67,15 +71,14 @@ export default function AiInsight({ weatherData, project }: AiInsightProps) {
   useEffect(() => {
     if (isProjectSpecificMode && project) {
       generateInsight();
-    } else if (!isProjectSpecificMode && weatherData) {
+    } else if (!isProjectSpecificMode && weatherData?.current) {
       generateInsight();
     } else {
       setInsightData(null);
-      setError(null);
     }
   }, [generateInsight, isProjectSpecificMode, project, weatherData]);
 
-  const canAttemptGeneration = isProjectSpecificMode ? !!project : !!weatherData;
+  const canAttemptGeneration = isProjectSpecificMode ? !!project : !!weatherData?.current;
 
   return (
     <div className="w-full">
@@ -124,7 +127,7 @@ export default function AiInsight({ weatherData, project }: AiInsightProps) {
                 <AlertDescription>Loading insight for this project...</AlertDescription>
             ) : (
                 <AlertDescription>
-                    {weatherData
+                    {weatherData?.current
                         ? 'Generating insight based on weather...'
                         : 'Enter a city to get weather and AI insight'}
                 </AlertDescription>

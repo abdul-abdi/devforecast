@@ -7,7 +7,7 @@ import WeatherDisplay from '@/components/weather/WeatherDisplay';
 import GitHubProjectHighlight from '@/components/github/GitHubProjectHighlight';
 import AiInsight from '@/components/ai-insight/AiInsight';
 import FloatingPatterns from '@/components/FloatingPatterns';
-import { WeatherData } from '@/types';
+import { CombinedWeatherData } from '@/types';
 import { Button } from "@/components/ui/button";
 import Clock from '@/components/Clock';
 import OnboardingTip from '@/components/OnboardingTip';
@@ -23,7 +23,7 @@ const FADE_DURATION = 2500; // milliseconds (2.5 seconds)
 
 export default function Home() {
   const { setTheme, theme } = useTheme();
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [weatherData, setWeatherData] = useState<CombinedWeatherData | null>(null);
   const [effects, setEffects] = useState<ImpactPoint[]>([]); // State for impact points
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number | null>(null); // Ref to store animation frame ID

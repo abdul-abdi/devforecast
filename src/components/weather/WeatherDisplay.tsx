@@ -6,35 +6,60 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { WeatherData } from '@/types';
+import { DailyForecastData, CombinedWeatherData } from '@/types';
+import { Separator } from '@/components/ui/separator';
 
 interface WeatherDisplayProps {
-  onWeatherDataChange: (data: WeatherData) => void;
+  onWeatherDataChange: (data: CombinedWeatherData) => void;
 }
 
-// Helper function to calculate local time
+// Helper function to get day name from timestamp
+const getDayName = (timestamp: number, timezoneOffset: number): string => {
+  const date = new Date((timestamp + timezoneOffset) * 1000);
+  // Adjust for local timezone offset to get correct UTC day
+  const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return utcDate.toLocaleDateString('en-US', { weekday: 'short' });
+};
+
+// Helper function to calculate local time (consider using timezoneOffset from forecast data)
 const getLocalTime = (utcOffsetSeconds: number): string => {
   const now = new Date();
-  const utcMilliseconds = now.getTime() + (now.getTimezoneOffset() * 60 * 1000); // Get current UTC time in ms
+  const utcMilliseconds = now.getTime() + (now.getTimezoneOffset() * 60 * 1000); 
   const localMilliseconds = utcMilliseconds + (utcOffsetSeconds * 1000);
   const localDate = new Date(localMilliseconds);
 
-  // Check if localDate is valid before formatting
   if (isNaN(localDate.getTime())) {
       console.error("Invalid date calculated for local time", { utcOffsetSeconds });
-      return "--:--"; // Return placeholder for invalid date
+      return "--:--";
   }
   
   return localDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+// Helper to get a simplified weather icon component based on OpenWeatherMap icon code
+const getWeatherIconComponent = (iconCode: string, className: string = "h-6 w-6") => {
+  // Map OWM icon codes to Lucide icons (simplified mapping)
+  if (iconCode.startsWith('01')) return <Sun className={className} />; // Clear
+  if (iconCode.startsWith('02')) return <Cloud className={className} />; // Few clouds
+  if (iconCode.startsWith('03') || iconCode.startsWith('04')) return <Cloud className={className} />; // Scattered/Broken clouds
+  if (iconCode.startsWith('09') || iconCode.startsWith('10')) return <CloudRain className={className} />; // Shower/Rain
+  if (iconCode.startsWith('11')) return <CloudRain className={className} />; // Thunderstorm (using rain icon)
+  if (iconCode.startsWith('13')) return <Snowflake className={className} />; // Snow
+  if (iconCode.startsWith('50')) return <Wind className={className} />; // Mist (using wind icon)
+  return <Cloud className={className} />; // Default
+};
+
 export default function WeatherDisplay({ onWeatherDataChange }: WeatherDisplayProps) {
   const [city, setCity] = useState<string>('London');
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  // State for the full combined data
+  const [combinedData, setCombinedData] = useState<CombinedWeatherData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Wrap fetchWeatherData in useCallback
+  // Extract current weather and forecast for easier use
+  const currentWeatherData = combinedData?.current;
+  const forecastData = combinedData?.forecast;
+
   const fetchWeatherData = useCallback(async (cityName?: string) => {
     const targetCity = cityName || city;
     if (!targetCity.trim()) {
@@ -44,86 +69,65 @@ export default function WeatherDisplay({ onWeatherDataChange }: WeatherDisplayPr
 
     setLoading(true);
     setError(null);
+    setCombinedData(null); // Clear old data
 
     try {
+      // Fetch combined data from our backend
       const response = await fetch(`/api/weather?city=${encodeURIComponent(targetCity)}&units=metric`);
-      const data = await response.json();
-
+      
+      // Check if the response was successful BEFORE parsing as CombinedWeatherData
       if (!response.ok) {
-        // Handle specific error cases with user-friendly messages
-        if (response.status === 401) {
-          throw new Error('API key error: The OpenWeatherMap API key is invalid or not activated yet. It may take up to 2 hours after registration to activate.');
-        } else if (response.status === 404) {
-          throw new Error(`City not found: "${targetCity}" could not be found. Please check the spelling and try again.`);
-        } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded: Too many requests to the weather API. Please try again later.');
-        } else {
-          throw new Error(data.details || 'Failed to fetch weather data');
+        let errorDetails = `Server error ${response.status}`;
+        try {
+          // Attempt to parse error response from backend API
+          const errorData = await response.json(); 
+          errorDetails = errorData?.details || errorData?.error || errorDetails;
+        } catch (parseError) {
+          // If parsing error JSON fails, stick with the status code
+          console.error("Failed to parse error response JSON:", parseError);
         }
+        throw new Error(errorDetails); 
       }
 
-      setWeatherData(data);
-      onWeatherDataChange(data);
-    } catch (err: unknown) { // Changed any to unknown
+      // If response is ok, parse the successful data structure
+      const data: CombinedWeatherData = await response.json(); // Expect CombinedWeatherData
+
+      setCombinedData(data); // Store the combined data
+      onWeatherDataChange(data); // Pass combined data up
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'An error occurred while fetching weather data';
       setError(message);
       console.error('Weather fetch error:', err);
     } finally {
       setLoading(false);
     }
-    // Remove 'city' dependency, keep 'onWeatherDataChange' as it's a prop function
-  }, [onWeatherDataChange]); // Removed 'city' from dependencies
+  // Update dependency: onWeatherDataChange might change if parent re-renders
+  }, [city, onWeatherDataChange]); // Add city back as dependency as it's used in the fetch logic
 
   useEffect(() => {
     fetchWeatherData('London');
-    // Run only on mount to fetch initial data
-  }, []); // Changed dependencies to empty array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Keep this effect running only on mount
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      // Pass the current city state explicitly when fetching on Enter
       fetchWeatherData(city); 
     }
   };
 
-  // Function to get the appropriate weather icon
-  const getWeatherIcon = () => {
-    if (!weatherData) return <Cloud className="h-12 w-12 text-blue-500" />;
-
-    const weatherCode = weatherData.weather[0].id;
-
-    // Thunderstorm
-    if (weatherCode >= 200 && weatherCode < 300) {
-      return <CloudRain className="h-12 w-12 text-gray-500" />;
-    }
-    // Drizzle or Rain
-    else if ((weatherCode >= 300 && weatherCode < 400) || (weatherCode >= 500 && weatherCode < 600)) {
-      return <CloudRain className="h-12 w-12 text-blue-500" />;
-    }
-    // Snow
-    else if (weatherCode >= 600 && weatherCode < 700) {
-      return <Snowflake className="h-12 w-12 text-blue-200" />;
-    }
-    // Atmosphere (fog, mist, etc.)
-    else if (weatherCode >= 700 && weatherCode < 800) {
-      return <Wind className="h-12 w-12 text-gray-400" />;
-    }
-    // Clear
-    else if (weatherCode === 800) {
-      return <Sun className="h-12 w-12 text-yellow-500" />;
-    }
-    // Clouds
-    else {
-      return <Cloud className="h-12 w-12 text-gray-400" />;
-    }
+  // Use currentWeatherData for the main icon
+  const getMainWeatherIcon = () => {
+    if (!currentWeatherData) return <Cloud className="h-12 w-12 text-blue-500" />;
+    const iconCode = currentWeatherData.weather[0].icon;
+    return getWeatherIconComponent(iconCode, "h-12 w-12");
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full flex flex-col h-full"> {/* Ensure card takes full height */}
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Weather Forecast</span>
-          {weatherData && getWeatherIcon()}
+          {currentWeatherData && getMainWeatherIcon()} {/* Use current data icon */}
         </CardTitle>
         <div className="flex gap-2">
           <Input
@@ -143,36 +147,64 @@ export default function WeatherDisplay({ onWeatherDataChange }: WeatherDisplayPr
           </div>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-grow"> {/* Allow content to grow */}
         {loading ? (
           <div className="space-y-2">
             <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-12 w-1/2" />
             <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-20 w-full mt-4" /> {/* Skeleton for forecast */}
           </div>
-        ) : weatherData ? (
+        ) : currentWeatherData ? (
           <div className="space-y-2">
+            {/* Current Weather Section */}
             <h3 className="text-2xl font-bold">
-              {weatherData.name}, {weatherData.sys.country}
+              {currentWeatherData.name}, {currentWeatherData.sys.country}
             </h3>
-            {/* Display Local Time */}
             <p className="text-sm text-muted-foreground -mt-1 mb-1">
-                Local Time: {getLocalTime(weatherData.timezone)}
+                {/* Use timezone offset from forecast if available, else from current */}
+                Local Time: {getLocalTime(forecastData?.timezone_offset ?? currentWeatherData.timezone)}
             </p>
             <div className="flex items-center gap-2">
-              <p className="text-4xl font-bold">{Math.round(weatherData.main.temp)}°C</p>
-              <p className="text-lg capitalize">{weatherData.weather[0].description}</p>
+              <p className="text-4xl font-bold">{Math.round(currentWeatherData.main.temp)}°C</p>
+              <p className="text-lg capitalize">{currentWeatherData.weather[0].description}</p>
             </div>
-            <div className="text-sm text-muted-foreground space-y-1"> 
-              <p>Feels like {Math.round(weatherData.main.feels_like)}°C</p>
-              <p className="flex items-center"><Droplet className="h-4 w-4 mr-1" /> Humidity: {weatherData.main.humidity}%</p>
-              <p className="flex items-center"><Wind className="h-4 w-4 mr-1" /> Wind: {weatherData.wind.speed} m/s</p>
-              <p className="flex items-center"><Gauge className="h-4 w-4 mr-1" /> Pressure: {weatherData.main.pressure} hPa</p>
+            <div className="text-sm text-muted-foreground space-y-1 pb-3"> 
+              <p>Feels like {Math.round(currentWeatherData.main.feels_like)}°C</p>
+              <p className="flex items-center"><Droplet className="h-4 w-4 mr-1" /> Humidity: {currentWeatherData.main.humidity}%</p>
+              <p className="flex items-center"><Wind className="h-4 w-4 mr-1" /> Wind: {currentWeatherData.wind.speed} m/s</p>
+              <p className="flex items-center"><Gauge className="h-4 w-4 mr-1" /> Pressure: {currentWeatherData.main.pressure} hPa</p>
             </div>
+
+            {/* Weekly Forecast Section */}
+            {forecastData?.daily && (
+              <>
+                <Separator className="my-4" />
+                <h4 className="text-md font-semibold mb-2">7-Day Forecast</h4>
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center text-sm">
+                  {/* Display next 7 days (index 1 to 7) */}
+                  {forecastData.daily.slice(1, 8).map((day: DailyForecastData, index: number) => (
+                    <div key={index} className="flex flex-col items-center p-1 rounded-md bg-muted/30">
+                      <span className="font-medium text-muted-foreground">
+                        {getDayName(day.dt, forecastData.timezone_offset)}
+                      </span>
+                      {getWeatherIconComponent(day.weather[0].icon, "h-6 w-6 my-1")}
+                      <span className="font-semibold">
+                        {Math.round(day.temp.max)}°
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round(day.temp.min)}°
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <p className="text-center text-muted-foreground py-6">
-            Enter a city name to get the current weather
+            Enter a city name to get the current weather and forecast
           </p>
         )}
       </CardContent>
