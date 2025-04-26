@@ -1,0 +1,69 @@
+.patternContainer {
+  position: fixed; /* Changed from absolute to fixed */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Ensure patterns don't interfere with interactions */
+  overflow: hidden;
+  z-index: -1; /* Restore background z-index */
+}
+
+.pattern {
+  position: absolute;
+  /* Removed width, height, background-color, border-radius - now set inline */
+  /* Opacity is also set inline */
+
+  /* Animation */
+  animation-name: floatRotate;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes floatRotate {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(var(--scale, 1));
+  }
+  50% {
+    transform: translateY(-25px) rotate(180deg) scale(var(--scale, 1)); /* Slightly more movement */
+  }
+  100% {
+    transform: translateY(0) rotate(360deg) scale(var(--scale, 1));
+  }
+}
+
+/* Restore pseudo-element */
+.pattern::before {
+    content: '';
+    position: absolute;
+    width: 40%;
+    height: 40%;
+    background-color: inherit;
+    border-radius: 60% 40% / 40% 60%;
+    top: -15%;
+    left: -15%;
+    transform: rotate(45deg);
+    animation: inherit;
+    animation-delay: inherit; 
+    animation-direction: reverse;
+    opacity: 0.9; /* Increase relative opacity */
+}
+
+/* Optional: Keep pseudo-element for layered effect, but use parent color/opacity */
+/* Commented out for debugging
+.pattern::before {
+    content: '';
+    position: absolute;
+    width: 40%;
+    height: 40%;
+    background-color: inherit;
+    border-radius: 60% 40% / 40% 60%;
+    top: -15%;
+    left: -15%;
+    transform: rotate(45deg);
+    animation: inherit;
+    animation-delay: inherit; 
+    animation-direction: reverse;
+    opacity: 0.6;
+}
+*/ 
