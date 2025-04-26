@@ -2,8 +2,6 @@
 
 DevForecast is a playful web application that combines daily weather updates, open-source project highlights, and AI-generated insights into a unified experience for tech enthusiasts.
 
-![DevForecast Screenshot](public/screenshot.png)
-
 ## Features
 
 - **Real-Time Weather Display**: Get current weather information for any city
@@ -26,53 +24,83 @@ DevForecast is a playful web application that combines daily weather updates, op
 ### Prerequisites
 
 - Node.js 18.x or later
-- npm or yarn
+- npm, yarn, or pnpm
 - API keys for:
-  - OpenWeatherMap
-  - GitHub (optional, but recommended for higher rate limits)
-    - Create a [fine-grained personal access token](https://github.com/settings/tokens?type=beta) with only public repository read access
-  - Google Gemini AI
+  - OpenWeatherMap (Required)
+  - Google Gemini AI (Required)
+  - GitHub (Optional, but recommended for higher API rate limits - see `.env.example`)
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/devforecast.git
-   cd devforecast
+   git clone https://github.com/your-username/gitreader.git # Or your repo URL
+   cd gitreader
    ```
 
 2. Install dependencies:
    ```bash
    npm install
    # or
-   yarn install
+   # yarn install
+   # or
+   # pnpm install
    ```
 
-3. Create a `.env.local` file in the root directory with your API keys:
-   ```
+3. Set up your environment variables:
+   - Copy the example environment file:
+     ```bash
+     cp .env.example .env.local
+     ```
+   - Edit `.env.local` and add your required API keys (OpenWeatherMap and Gemini).
+   - Optionally, add your GitHub token for better rate limits.
+   - The base URLs for the APIs are usually not needed unless you are using a proxy or specific endpoint.
+
+   ```env
+   # .env.local
    OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
-   GITHUB_API_TOKEN=your_github_api_token
    GEMINI_API_KEY=your_gemini_api_key
 
-   NEXT_PUBLIC_OPENWEATHERMAP_BASE_URL=https://api.openweathermap.org/data/2.5
-   NEXT_PUBLIC_GITHUB_API_BASE_URL=https://api.github.com
-   NEXT_PUBLIC_GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+   # Optional:
+   # GITHUB_TOKEN=your_github_token
+   # NEXT_PUBLIC_OPENWEATHERMAP_BASE_URL=
+   # NEXT_PUBLIC_GITHUB_API_BASE_URL=
+   # NEXT_PUBLIC_GEMINI_API_BASE_URL=
    ```
 
-   > **Note about GitHub API**: The application uses the GitHub REST API v2022-11-28 with best practices including:
-   > - Bearer token authentication
-   > - Conditional requests with ETags to reduce API usage
-   > - Proper rate limit handling
-   > - Without a token, you'll be limited to 60 requests per hour
+   > **Note about GitHub API**: The application uses the GitHub REST API v2022-11-28 with best practices including bearer token authentication (if provided), conditional requests with ETags, and rate limit handling. Without a token, you'll be limited to 60 requests per hour.
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
+### Running the Development Server
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+```bash
+npm run dev
+# or
+# yarn dev
+# or
+# pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+This command creates an optimized production build of the application.
+
+### Starting the Production Server
+
+After building, you can start the production server:
+
+```bash
+npm start
+# or
+# yarn start
+# or
+# pnpm start
+```
 
 ## Contributing
 
