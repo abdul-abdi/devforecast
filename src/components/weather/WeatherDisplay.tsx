@@ -71,17 +71,18 @@ export default function WeatherDisplay({ onWeatherDataChange }: WeatherDisplayPr
     } finally {
       setLoading(false);
     }
-    // Add dependencies for useCallback
-  }, [city, onWeatherDataChange]);
+    // Remove 'city' dependency, keep 'onWeatherDataChange' as it's a prop function
+  }, [onWeatherDataChange]); // Removed 'city' from dependencies
 
   useEffect(() => {
     fetchWeatherData('London');
-    // Add fetchWeatherData to the dependency array
-  }, [fetchWeatherData]);
+    // Run only on mount to fetch initial data
+  }, []); // Changed dependencies to empty array
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      fetchWeatherData();
+      // Pass the current city state explicitly when fetching on Enter
+      fetchWeatherData(city); 
     }
   };
 
@@ -132,7 +133,7 @@ export default function WeatherDisplay({ onWeatherDataChange }: WeatherDisplayPr
             onKeyDown={handleKeyDown}
             disabled={loading}
           />
-          <Button onClick={() => fetchWeatherData()} disabled={loading}>
+          <Button onClick={() => fetchWeatherData(city)} disabled={loading}>
             {loading ? 'Loading...' : <Search className="h-4 w-4" />}
           </Button>
         </div>
