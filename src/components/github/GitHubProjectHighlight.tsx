@@ -173,20 +173,20 @@ export default function GitHubProjectHighlight() {
 
   return (
     <Card className="w-full shadow-lg border-opacity-50 hover:border-opacity-100 transition-all duration-300 backdrop-blur-[2px] overflow-hidden">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 px-3 sm:px-6">
         <div className="flex items-center justify-between">
           <motion.div 
-            initial={{ x: -10, opacity: 0 }} // Reduced x distance from -20 to -10
+            initial={{ x: -10, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.25 }} // Reduced from 0.3
+            transition={{ duration: 0.25 }}
           >
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               {filter === 'bookmarked' ? (
-                <Bookmark className="h-5 w-5 text-primary" />
+                <Bookmark className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               ) : (
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               )}
-              <span>{filter === 'bookmarked' ? 'Bookmarked Projects' : 'Open Source Highlights'}</span>
+              <span className="line-clamp-1">{filter === 'bookmarked' ? 'Bookmarked Projects' : 'Open Source Highlights'}</span>
             </CardTitle>
           </motion.div>
           
@@ -205,10 +205,10 @@ export default function GitHubProjectHighlight() {
         
         {/* Filters */}
         <motion.div 
-          initial={{ y: 5, opacity: 0 }} // Reduced y distance from 10 to 5
+          initial={{ y: 5, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.25, delay: 0.05 }} // Reduced duration and delay
-          className="mt-4"
+          transition={{ duration: 0.25, delay: 0.05 }}
+          className="mt-3 sm:mt-4"
         >
           <ProjectFilters
             filter={filter}
@@ -227,7 +227,7 @@ export default function GitHubProjectHighlight() {
         </motion.div>
       </CardHeader>
       
-      <CardContent className="pb-6">
+      <CardContent className="pb-6 px-3 sm:px-6">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div 
@@ -235,7 +235,7 @@ export default function GitHubProjectHighlight() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
             >
               {Array.from({ length: 4 }).map((_, index) => (
                 <motion.div 
@@ -263,7 +263,7 @@ export default function GitHubProjectHighlight() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="p-4 bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded-md"
+              className="p-3 sm:p-4 bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded-md"
             >
               <p className="text-destructive dark:text-destructive mb-2 font-medium">Error Loading Projects</p>
               <p className="text-sm text-destructive/80 dark:text-destructive/90">{error}</p>
@@ -284,7 +284,7 @@ export default function GitHubProjectHighlight() {
               initial="hidden"
               animate="show"
               exit={{ opacity: 0 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
             >
               {projects.map((project, index) => (
                 <motion.div 
@@ -306,7 +306,7 @@ export default function GitHubProjectHighlight() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center text-center text-muted-foreground py-10 px-4"
+              className="flex flex-col items-center justify-center text-center text-muted-foreground py-6 sm:py-10 px-3 sm:px-4"
             >
               <Info className="h-10 w-10 mb-3 text-muted-foreground/60" />
               {filter === 'bookmarked' ? (

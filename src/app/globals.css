@@ -43,6 +43,16 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Custom utility classes */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 /* Ghibli-inspired Palette (Example - can be refined) */
 /* Light Mode */
 :root {

@@ -31,12 +31,33 @@ export default function ProjectFilters({
         onValueChange={(value) => onFilterChange(value as ProjectFilter)}
         className="w-full"
       >
-        <TabsList className="grid grid-cols-5 w-full bg-secondary/40 dark:bg-secondary/20 backdrop-blur-sm p-0.5">
-          <TabsTrigger value="all" className="font-medium data-[state=active]:bg-card data-[state=active]:text-foreground">All</TabsTrigger>
-          <TabsTrigger value="trending" className="font-medium data-[state=active]:bg-card data-[state=active]:text-foreground">Trending</TabsTrigger>
-          <TabsTrigger value="beginner-friendly" className="font-medium data-[state=active]:bg-card data-[state=active]:text-foreground">For Beginners</TabsTrigger>
-          <TabsTrigger value="recently-updated" className="font-medium data-[state=active]:bg-card data-[state=active]:text-foreground">Recent</TabsTrigger>
-          <TabsTrigger value="bookmarked" className="font-medium data-[state=active]:bg-card data-[state=active]:text-foreground">Bookmarked</TabsTrigger>
+        <TabsList className="flex flex-wrap w-full bg-secondary/40 dark:bg-secondary/20 backdrop-blur-sm p-0.5 overflow-x-auto">
+          {/* Mobile view - stacked or scrollable */}
+          <TabsTrigger 
+            value="all" 
+            className="flex-1 min-w-[80px] font-medium text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+            All
+          </TabsTrigger>
+          <TabsTrigger 
+            value="trending" 
+            className="flex-1 min-w-[80px] font-medium text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+            Trending
+          </TabsTrigger>
+          <TabsTrigger 
+            value="beginner-friendly" 
+            className="flex-1 min-w-[80px] font-medium text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+            For Beginners
+          </TabsTrigger>
+          <TabsTrigger 
+            value="recently-updated" 
+            className="flex-1 min-w-[80px] font-medium text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+            Recent
+          </TabsTrigger>
+          <TabsTrigger 
+            value="bookmarked" 
+            className="flex-1 min-w-[80px] font-medium text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+            Bookmarked
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -48,10 +69,22 @@ export default function ProjectFilters({
             onValueChange={(value) => onTimeFilterChange(value as ProjectTimeFilter)}
             className="w-full max-w-xs"
           >
-            <TabsList className="grid grid-cols-3 w-full bg-secondary/40 dark:bg-secondary/20 backdrop-blur-sm p-0.5">
-              <TabsTrigger value="daily" className="data-[state=active]:bg-card data-[state=active]:text-foreground">Daily</TabsTrigger>
-              <TabsTrigger value="weekly" className="data-[state=active]:bg-card data-[state=active]:text-foreground">Weekly</TabsTrigger>
-              <TabsTrigger value="monthly" className="data-[state=active]:bg-card data-[state=active]:text-foreground">Monthly</TabsTrigger>
+            <TabsList className="flex w-full bg-secondary/40 dark:bg-secondary/20 backdrop-blur-sm p-0.5">
+              <TabsTrigger 
+                value="daily" 
+                className="flex-1 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+                Daily
+              </TabsTrigger>
+              <TabsTrigger 
+                value="weekly" 
+                className="flex-1 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+                Weekly
+              </TabsTrigger>
+              <TabsTrigger 
+                value="monthly" 
+                className="flex-1 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground">
+                Monthly
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
