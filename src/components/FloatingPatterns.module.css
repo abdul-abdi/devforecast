@@ -1,52 +1,90 @@
 .patternContainer {
-  position: fixed; /* Changed from absolute to fixed */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* Ensure patterns don't interfere with interactions */
+  pointer-events: none;
   overflow: hidden;
-  z-index: -1; /* Restore background z-index */
+  z-index: -1;
+  opacity: 0.6; /* Reduced global opacity from 0.7 to 0.6 */
 }
 
 .pattern {
   position: absolute;
-  /* Removed width, height, background-color, border-radius - now set inline */
-  /* Opacity is also set inline */
-
-  /* Animation */
-  animation-name: floatRotate;
-  animation-timing-function: linear;
+  animation-name: floatMovement;
+  animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
   animation-iteration-count: infinite;
+  will-change: transform; /* Performance optimization */
+  transform-origin: center center;
+  box-shadow: 0 0 20px 5px rgba(0, 0, 0, 0.02); /* Reduced shadow intensity */
+  mix-blend-mode: plus-lighter;
+  /* Removed backdrop-filter for performance */
 }
 
-@keyframes floatRotate {
+/* Simplified animation with fewer keyframes and only transform changes */
+@keyframes floatMovement {
   0% {
-    transform: translateY(0) rotate(0deg) scale(var(--scale, 1));
+    transform: translateY(0) translateX(0) rotate(0deg) scale(var(--scale, 1));
   }
   50% {
-    transform: translateY(-25px) rotate(180deg) scale(var(--scale, 1)); /* Slightly more movement */
+    transform: translateY(-20px) translateX(10px) rotate(180deg) scale(var(--scale, 1));
   }
   100% {
-    transform: translateY(0) rotate(360deg) scale(var(--scale, 1));
+    transform: translateY(0) translateX(0) rotate(360deg) scale(var(--scale, 1));
   }
 }
 
-/* Restore pseudo-element */
+/* Simplified pseudo-element with less complex animation */
 .pattern::before {
-    content: '';
-    position: absolute;
-    width: 40%;
-    height: 40%;
-    background-color: inherit;
-    border-radius: 60% 40% / 40% 60%;
-    top: -15%;
-    left: -15%;
-    transform: rotate(45deg);
-    animation: inherit;
-    animation-delay: inherit; 
-    animation-direction: reverse;
-    opacity: 0.9; /* Increase relative opacity */
+  content: '';
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  background-color: inherit;
+  border-radius: 60% 40% 70% 30% / 40% 60% 30% 70%;
+  top: -15%;
+  left: -15%;
+  transform: rotate(45deg);
+  filter: brightness(1.2);
+  opacity: 0.7; /* Reduced from 0.8 */
+  /* Use the same animation for consistency and better performance */
+  animation: floatMovement 24s linear infinite;
+}
+
+/* Media query to reduce or disable animations on mobile devices for better performance */
+@media (max-width: 768px) {
+  .patternContainer {
+    opacity: 0.4; /* Further reduce opacity on mobile */
+  }
+  
+  .pattern {
+    animation-duration: 40s !important; /* Slower animations on mobile */
+  }
+  
+  /* Limit number of patterns on mobile */
+  .pattern:nth-child(n+8) {
+    display: none;
+  }
+}
+
+/* Slight adaptation for dark mode */
+[data-theme-mode="dark"] .pattern {
+  mix-blend-mode: lighten; /* Different blend mode for dark theme */
+}
+
+/* Add a bit more opacity variation on hover for an interactive feel
+   even though these elements don't directly interact */
+.patternContainer:hover .pattern {
+  transition: opacity 1.5s ease-in-out;
+}
+
+.patternContainer:hover .pattern:nth-child(odd) {
+  opacity: calc(var(--opacity, 0.5) * 1.2);
+}
+
+.patternContainer:hover .pattern:nth-child(even) {
+  opacity: calc(var(--opacity, 0.5) * 0.8);
 }
 
 /* Optional: Keep pseudo-element for layered effect, but use parent color/opacity */

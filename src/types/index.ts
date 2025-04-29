@@ -91,4 +91,5 @@ export interface GitHubProjectData {
 // AI insight data type
 export interface AiInsightData {
   message: string;
+  question?: string;
 }

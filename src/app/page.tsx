@@ -1,25 +1,37 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useTheme } from "next-themes";
 import { /*Cloud, Github,*/ Moon, Sun } from 'lucide-react';
-import WeatherDisplay from '@/components/weather/WeatherDisplay';
-import GitHubProjectHighlight from '@/components/github/GitHubProjectHighlight';
-import AiInsight from '@/components/ai-insight/AiInsight';
-import FloatingPatterns from '@/components/FloatingPatterns';
 import { CombinedWeatherData } from '@/types';
 import { Button } from "@/components/ui/button";
 import Clock from '@/components/Clock';
 import OnboardingTip from '@/components/OnboardingTip';
+import { motion } from 'framer-motion';
+import { ClientCache } from '@/lib/client-cache';
+
+// Lazy load components for better initial loading performance
+const WeatherDisplay = lazy(() => import('@/components/weather/WeatherDisplay'));
+const GitHubProjectHighlight = lazy(() => import('@/components/github/GitHubProjectHighlight'));
+const GitHubSearch = lazy(() => import('@/components/github/GitHubSearch'));
+// const AiInsight = lazy(() => import('@/components/ai-insight/AiInsight'));
+const FloatingPatterns = lazy(() => import('@/components/FloatingPatterns'));
 
 // Define type for effect points
 interface ImpactPoint {
   x: number;
   y: number;
-  timestamp: number; // Added timestamp
+  timestamp: number;
 }
 
 const FADE_DURATION = 2500; // milliseconds (2.5 seconds)
+
+// Loading fallback component with skeleton animation
+const ComponentLoader = () => (
+  <div className="w-full h-full min-h-[300px] rounded-lg border border-border animate-pulse bg-muted/30 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+  </div>
+);
 
 export default function Home() {
   const { setTheme, theme } = useTheme();
@@ -27,6 +39,7 @@ export default function Home() {
   const [effects, setEffects] = useState<ImpactPoint[]>([]); // State for impact points
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number | null>(null); // Ref to store animation frame ID
+  const [hasVisited, setHasVisited] = useState<boolean>(false);
 
   // Function to handle clicks on the main container
   const handleBackgroundClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -37,18 +50,47 @@ export default function Home() {
     setEffects(prevEffects => [...prevEffects, { x, y, timestamp: Date.now() }]); // Add timestamp
   }, []);
 
+  // Check if user has visited before
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const visited = localStorage.getItem('devforecast_has_visited');
+      setHasVisited(visited === 'true');
+      localStorage.setItem('devforecast_has_visited', 'true');
+    }
+  }, []);
+
+  // Clear the client cache when component mounts (once per session)
+  useEffect(() => {
+    const sessionCacheCleaned = sessionStorage.getItem('cache_cleaned_this_session');
+    if (!sessionCacheCleaned) {
+      // Remove expired items only, not everything
+      ClientCache.cleanCache();
+      sessionStorage.setItem('cache_cleaned_this_session', 'true');
+    }
+  }, []);
+
   // Refactored drawing logic with requestAnimationFrame
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext('2d', { alpha: true }); // Specify alpha for better performance
     if (!context) return;
 
     let lastTimestamp = 0;
+    const THROTTLE_FPS = 30; // Limit to 30fps for better performance (instead of 60fps)
+    const throttleInterval = 1000 / THROTTLE_FPS;
 
     const draw = (timestamp: number) => {
       if (!lastTimestamp) lastTimestamp = timestamp;
-      // const deltaTime = timestamp - lastTimestamp;
+      const deltaTime = timestamp - lastTimestamp;
+      
+      // Throttle frame rate to improve performance
+      if (deltaTime < throttleInterval) {
+        animationFrameId.current = requestAnimationFrame(draw);
+        return;
+      }
+      
+      lastTimestamp = timestamp;
       const now = Date.now();
 
       // Resize canvas (only if needed - consider moving to resize effect)
@@ -61,7 +103,7 @@ export default function Home() {
       context.clearRect(0, 0, canvas.width, canvas.height);
 
       const baseColor = theme === 'dark' ? '255, 255, 255' : '0, 0, 0';
-      const baseOpacity = theme === 'dark' ? 0.75 : 0.6; // Increased base opacity
+      const baseOpacity = theme === 'dark' ? 0.6 : 0.5; // Reduced opacity values
 
       let hasActiveEffects = false;
       // Draw cracks for each effect, applying fade
@@ -73,23 +115,23 @@ export default function Home() {
         hasActiveEffects = true;
 
         const currentOpacity = baseOpacity * (1 - age / FADE_DURATION);
-        const numPrimaryCracks = 7 + Math.floor(Math.random() * 4); // 7-10 primary cracks
+        const numPrimaryCracks = 5 + Math.floor(Math.random() * 3); // Reduced from 7-10 to 5-7
 
         // Draw central shatter first
-        context.fillStyle = `rgba(${baseColor}, ${currentOpacity * 0.8})`; // Slightly less opaque fill
+        context.fillStyle = `rgba(${baseColor}, ${currentOpacity * 0.8})`;
         context.beginPath();
-        context.arc(point.x, point.y, 3 + Math.random() * 3, 0, Math.PI * 2); // Small irregular center
+        context.arc(point.x, point.y, 3 + Math.random() * 2, 0, Math.PI * 2); // Smaller center
         context.fill();
 
         // Draw jagged cracks radiating outwards
         for (let i = 0; i < numPrimaryCracks; i++) {
-          const angle = (i / numPrimaryCracks) * Math.PI * 2 + (Math.random() - 0.5) * 0.5; // Spread angles slightly
-          const totalLength = 50 + Math.random() * 100; // Increased length (50-150px)
-          const segments = 5 + Math.floor(Math.random() * 5); // 5-9 segments per crack
+          const angle = (i / numPrimaryCracks) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+          const totalLength = 40 + Math.random() * 60; // Reduced from 50-150px to 40-100px
+          const segments = 4 + Math.floor(Math.random() * 3); // Reduced from 5-9 to 4-6 segments
           const segmentLength = totalLength / segments;
 
           context.strokeStyle = `rgba(${baseColor}, ${currentOpacity})`;
-          context.lineWidth = 1.5 + Math.random() * 2; // Slightly thicker (1.5 - 3.5px)
+          context.lineWidth = 1 + Math.random() * 1.5; // Thinner lines (1-2.5px)
           context.beginPath();
           context.moveTo(point.x, point.y);
 
@@ -99,7 +141,7 @@ export default function Home() {
 
           for (let j = 0; j < segments; j++) {
             // Add randomness to angle for jaggedness
-            currentAngle += (Math.random() - 0.5) * 0.6; // More deviation
+            currentAngle += (Math.random() - 0.5) * 0.4; // Less deviation
             // Calculate segment end point
             const segEndX = currentX + Math.cos(currentAngle) * segmentLength;
             const segEndY = currentY + Math.sin(currentAngle) * segmentLength;
@@ -109,21 +151,12 @@ export default function Home() {
             currentX = segEndX;
             currentY = segEndY;
 
-             // Optional: Add small branching cracks sometimes
-             if (Math.random() < 0.15) { // 15% chance to branch
-                const branchAngle = currentAngle + (Math.random() - 0.5) * Math.PI / 2; // Branch off at an angle
-                const branchLength = segmentLength * (0.5 + Math.random() * 0.5);
-                const branchEndX = currentX + Math.cos(branchAngle) * branchLength;
-                const branchEndY = currentY + Math.sin(branchAngle) * branchLength;
-                context.moveTo(currentX, currentY); // Move back to fork point
-                context.lineTo(branchEndX, branchEndY);
-             }
+            // Removed branching cracks for better performance
           }
           context.stroke();
         }
       });
 
-      lastTimestamp = timestamp;
       // Only continue animating if there are active effects
       if (hasActiveEffects) {
         animationFrameId.current = requestAnimationFrame(draw);
@@ -134,14 +167,12 @@ export default function Home() {
 
     // Start the animation loop if there are effects
     if (effects.length > 0 && animationFrameId.current === null) {
-        // console.log('Starting animation loop'); // Debug log
         animationFrameId.current = requestAnimationFrame(draw);
     }
 
-    // Cleanup function to cancel animation frame on unmount or when effects change externally
+    // Cleanup function to cancel animation frame on unmount
     return () => {
       if (animationFrameId.current !== null) {
-        // console.log('Cancelling animation frame'); // Debug log
         cancelAnimationFrame(animationFrameId.current);
         animationFrameId.current = null;
       }
@@ -182,42 +213,80 @@ export default function Home() {
       className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center p-4"
       onClick={handleBackgroundClick}
     >
-      <FloatingPatterns />
+      <Suspense fallback={null}>
+        <FloatingPatterns />
+      </Suspense>
       <canvas
         ref={canvasRef}
         className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none"
       />
       <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
         <Clock />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-        >
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
+        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            className="bg-background/80 backdrop-blur-sm"
+          >
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+        </motion.div>
       </div>
       <main className="container py-8 px-4 relative z-10 w-full max-w-7xl mt-12">
-        <OnboardingTip />
-        <div className="max-w-6xl mx-auto mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <WeatherDisplay onWeatherDataChange={setWeatherData} />
-            <GitHubProjectHighlight />
+        {!hasVisited && <OnboardingTip />}
+        <motion.div 
+          className="max-w-6xl mx-auto mt-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ 
+            duration: 0.4,
+            // Use a more performant ease function
+            ease: [0.25, 0.1, 0.25, 1]
+          }}
+        >
+          <div className="mb-8">
+            <Suspense fallback={<ComponentLoader />}>
+              <div className="bg-card border rounded-lg shadow-sm p-6">
+                <h2 className="text-2xl font-semibold mb-4">Search GitHub Repositories</h2>
+                <GitHubSearch />
+              </div>
+            </Suspense>
           </div>
-
-          <AiInsight weatherData={weatherData} />
-
-        </div>
-        <div className="max-w-4xl mx-auto mt-12 text-center px-4">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="lg:col-span-2">
+              <Suspense fallback={<ComponentLoader />}>
+                <GitHubProjectHighlight />
+              </Suspense>
+            </div>
+            <div className="lg:col-span-1">
+              <Suspense fallback={<ComponentLoader />}>
+                <WeatherDisplay onWeatherDataChange={setWeatherData} weatherData={weatherData} />
+              </Suspense>
+            </div>
+          </div>
+        </motion.div>
+        <motion.div 
+          className="max-w-4xl mx-auto mt-12 text-center px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ 
+            delay: 0.2, 
+            duration: 0.4,
+            // Use a more performant ease function
+            ease: [0.25, 0.1, 0.25, 1]
+          }}
+        >
           <h2 className="text-2xl font-semibold mb-4">Welcome to DevForecast!</h2>
           <p className="text-muted-foreground">
             Get the current weather forecast for any city, discover trending open-source projects from GitHub, 
-            and receive AI-powered insights that playfully connect the weather to the world of development. 
+            search for specific repositories, and receive AI-powered insights that playfully connect the weather to the world of development. 
             Use the inputs above to get started!
           </p>
-        </div>
+        </motion.div>
       </main>
     </div>
   );

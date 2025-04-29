@@ -20,7 +20,11 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-      prompt = `Write a short, enthusiastic, and informative summary (1-3 sentences) about the open-source project "${project.name}". Mention its purpose: "${project.description}". Include details like language (${project.language || 'Not specified'}) and star count (${project.stargazers_count || 0}). Focus on encouraging a developer to check it out.`;
+      prompt = `Write a short, enthusiastic, and informative summary (1-3 sentences) about the open-source project "${project.name}". 
+
+      Mention its purpose: "${project.description}". Include details like language (${project.language || 'Not specified'}) and star count (${project.stargazers_count || 0}). 
+      
+      Focus on encouraging a developer to check it out. Use clear, direct language and avoid using asterisks or other special formatting characters.`;
     }
     // Mode 2: Global insight (original behavior, requires weather and project)
     else if (weatherData && projectData && !project) {
@@ -30,7 +34,9 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
          }
-      prompt = `Given the weather is ${weatherData.weather[0].description} at ${Math.round(weatherData.main.temp)}°C in ${weatherData.name} and a highlighted project is ${projectData.name}: ${projectData.description}, write a short, witty, and encouraging message (1-3 sentences) for a developer seeing this information.`;
+      prompt = `Given the weather is ${weatherData.weather[0].description} at ${Math.round(weatherData.main.temp)}°C in ${weatherData.name} and a highlighted project is ${projectData.name}: ${projectData.description}, write a short, witty, and encouraging message (1-3 sentences) for a developer seeing this information.
+      
+      Use clear, direct language and avoid using asterisks or other special formatting characters.`;
     }
     // Mode 3: Global insight (new, requires only weather)
     else if (weatherData && !projectData && !project) {
@@ -40,7 +46,9 @@ export async function POST(request: NextRequest) {
             { status: 400 }
         );
       }
-      prompt = `The current weather in ${weatherData.name} is ${weatherData.weather[0].description} with a temperature of ${Math.round(weatherData.main.temp)}°C. Write a short, creative, and encouraging message (1-3 sentences) for a developer, perhaps suggesting an indoor coding activity or enjoying the weather.`;
+      prompt = `The current weather in ${weatherData.name} is ${weatherData.weather[0].description} with a temperature of ${Math.round(weatherData.main.temp)}°C. Write a short, creative, and encouraging message (1-3 sentences) for a developer, perhaps suggesting an indoor coding activity or enjoying the weather.
+      
+      Use clear, direct language and avoid using asterisks or other special formatting characters.`;
     }
     // Invalid combination
     else {
@@ -104,8 +112,14 @@ export async function POST(request: NextRequest) {
 
     // Extract the generated text from the response
     const generatedText = response.data.candidates[0].content.parts[0].text;
+    
+    // Post-process to clean up any formatting issues
+    const cleanedText = generatedText
+      .replace(/\*\*/g, '') // Remove double asterisks
+      .replace(/\s\*([^*]+)\*/g, ' $1') // Remove single asterisks used for emphasis
+      .trim();
 
-    return NextResponse.json({ message: generatedText });
+    return NextResponse.json({ message: cleanedText });
 
   } catch (error: unknown) {
     // Type guard for axios error
